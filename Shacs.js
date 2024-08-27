@@ -9,6 +9,7 @@
  ******************************************************************************/
 //var sensores_puntos = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/sensores_corfo");
 var dataSensores = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/DataSensores");
+var s = require('users/aliciaquijadac/VisualizadorSR:Style.js').styles; 
 
 
 /*******************************************************************************
@@ -51,7 +52,10 @@ function onClickSHAC(lon, lat, c, region, shac_layer) {
     print('El punto está fuera de la región.');
     return null;
   }
-
+  // Eliminar links de descarga previos, si es que hay
+  
+  c.downloadBand.label.setValue('');
+  c.downloadBand.label.style().set(s.disableLabel);
   // Buscar el SHAC correspondiente en shac_layer
   var shacFeature = shac_layer.filterBounds(point).first();
   
@@ -59,7 +63,6 @@ function onClickSHAC(lon, lat, c, region, shac_layer) {
     if (feature) {
       var shacValue = feature.properties.SHAC;
       // Asignar el valor al ui.Select
-      c.selectSHAC.selector.items().reset([shacValue]);
       c.selectSHAC.selector.setValue(shacValue);
       //print('SHAC encontrado: ' + shacValue);
     } else {
@@ -165,8 +168,13 @@ function zoomSHAC(nombreSeleccionado, shac_layer, map) {
     // Aplicar el estilo al SHAC seleccionado
     var highlightedFeature = shacFeature.style(highlightedStyle);
     
+    var highLayer = ui.Map.Layer(highlightedFeature, null,'lastHighlighted');
+        
     // Agregar el SHAC resaltado al mapa
-    map.addLayer(highlightedFeature, null, 'lastHighlighted');
+    //map.addLayer(highlightedFeature, null, 'lastHighlighted');
+    
+    map.layers().set(2, highLayer);
+    
     map.centerObject(bbox);
   } else {
     print('No se encontró la geometría para el SHAC:', nombreSeleccionado);
