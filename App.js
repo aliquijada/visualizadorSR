@@ -6,7 +6,7 @@
 var startTime = new Date().getTime();
 
 //var Selectores = require('users/corfobbppciren2023/App_HS_User:Selectores.js'); 
-//var ImgClass = require('users/corfobbppciren2023/App_HS_User:Img_collection.js'); 
+var ImgClass = require('users/aliciaquijadac/VisualizadorSR:Img_collection.js'); 
 //var chartClass = require('users/corfobbppciren2023/App_HS_User:TimeSerie.js'); 
 var ShacClass = require('users/aliciaquijadac/VisualizadorSR:Shacs.js'); 
 //var Leyenda = require('users/corfobbppciren2023/App_HS_User:Leyenda.js'); 
@@ -15,79 +15,31 @@ var s = require('users/aliciaquijadac/VisualizadorSR:Style.js').styles;
 var c = {}; // Define a JSON object for storing UI components.
 var region = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Geometrias/Region_de_Valparaiso_4326_corregido");
 var shac_layer = ee.FeatureCollection("projects/ee-aliciaquijadac/assets/Geometrias/SHACs_V_Region");
-var shac_names = [
-  'Acuifero_1_San_Felipe',
-'Acuifero_2_Putaendo',
-'Acuifero_3_Panquehue',
-'Acuifero_4_Catemu',
-'Acuifero_5_Llay_Llay',
-'Acuifero_6_Nogales_Hijuelas',
-'Acuifero_7_Quillota',
-'Acuifero_8_Aconcagua_desembocadura',
-'Acuifero_9_Limache',
-'Algarrobo',
-'Altos_de_Rapel',
-'Concon',
-'Curauma',
-'Dunas_de_Quintero',
-'El_Tabo',
-'Esterlo_Los_Molles',
-'Estero_Cachagua',
-'Estero_Cartagena',
-'Estero_Casablanca_Desembocadura',
-'Estero_Catapilco',
-'Estero_El_Membrillo_AR',
-'Estero_El_Pangal',
-'Estero_El_Rosario_Costeras_V',
-'Estero_El_Sauce',
-'Estero_Guaquen',
-'Estero_Laguna_Verde',
-'Estero_Las_Salinas_Sur',
-'Estero_La_Canela',
-'Estero_Mantagua',
-'Estero_Papudo',
-'Estero_Pucalan',
-'Estero_Puchuncavi',
-'Estero_San_Jeronimo',
-'Estero_San_Jose',
-'Estero_Vina_del_Mar',
-'Horcon',
-'La_Laguna_Catapilco',
-'La_Vinilla_Casablanca',
-'Los_Perales',
-'Lo_Orozco',
-'Lo_Ovalle',
-'Maipo_Desembocadura',
-'Melipilla',
-'Puangue_Alto',
-'Punta_Gallo',
-'Punta_Pichicuy',
-'Quintay',
-'Rio_Rapel_bajo_junta_Estero_Rosario',
-'Rocas_de_Santo_Domingo',
-'Rocas_El_Caracol',
-'Rocas_Pichidangui',
-'Rocas_Punta_Curaumilla',
-'Rocas_Punta_La_Ligua',
-'Rocas_Punta_Panul',
-'Rocas_Zapallar',
-'Roca_Playas_Los_Molles',
-'Sector_10_Rio_Petorca_Oriente',
-'Sector_11_Rio_La_Ligua_Costa',
-'Sector_12_Estero_Patagua',
-'Sector_1_Rio_Pedernal',
-'Sector_2_Estero_Las_Palmas',
-'Sector_3_Rio_del_Sobrante',
-'Sector_4_Rio_Petorca_Oriente',
-'Sector_5_Estero_Alicahue',
-'Sector_6_Rio_La_Ligua_Oriente',
-'Sector_7_Rio_La_Ligua_Cabildo',
-'Sector_8_Rio_La_Ligua_Pueblo',
-'Sector_9_Los_Angeles',
-'Sector_Renaca',
-'Sector_San_Antonio',
-'Sector_Valparaiso',
-'Yali_Bajo_El_Prado'];
+
+
+var shac_names = ['Melipilla','Puangue Alto','Lo Ovalle','Los Perales',
+'Lo Orozco','La Vinilla-Casablanca','Estero Papudo','La Laguna -  Catapilco',
+'Estero Cachagua','Estero Puchuncavi','Dunas de Quintero','Horcon',
+'Estero Las Salinas Sur','Maipo Desembocadura','Rocas de Santo Domingo','Estero San Jeronimo',
+'Estero Guaquen','Estero Catapilco','Algarrobo','Punta Gallo',
+'Estero Casablanca Desembocadura','Estero Vina del Mar','Estero Cartagena',
+'Estero San Jose','Estero El Sauce','Estero El Membrillo - AR',
+'Sector 1 - Rio Pedernal','Sector 2 - Estero Las Palmas','Sector 10 - Rio Petorca Oriente',
+'Sector 4 - Rio Petorca Poniente','Sector 3 - Rio del Sobrante','Sector 11 - Rio La Ligua Costa',
+'Sector 7 - Rio La Ligua Cabildo','Sector 9 - Estero Los Angeles','Sector 8 - Rio La Ligua Pueblo',
+'Sector 6 - Rio La Ligua Oriente','Sector 5 - Estero Alicahue','Sector 12 - Estero Patagua',
+'Acuifero 1 - San Felipe','Acuifero 4 - Catemu','Acuifero 3 - Panquehue',
+'Acuifero 2 - Putaendo','Acuifero 8 - Aconcagua desembocadura','Acuifero 6 - Nogales-Hijuelas',
+'Acuifero 7 - Quillota','Acuifero 9 - Limache','Acuifero 5 - Llay Llay',
+'Rocas Playas Los Molles','Rocas Pichidangui','Punta Pichicuy',
+'Estero El Pangal','Rocas Punta La Ligua','Rocas Zapallar',
+'Curauma','Rocas Punta Curaumilla','Sector Valparaiso',
+'Concon','Rocas El Caracol','Rocas Punta Panul','Sector San Antonio',
+'Altos de Rapel','Sector Renaca','Estero Los Molles','Estero Mantagua',
+'Estero La Canela','Estero Pucalan','Quintay','El Tabo',
+'Estero El Rosario - Costeras V','Estero Laguna Verde','Yali Bajo El Prado',
+'Maitenlahue','Rio Rapel bajo junta estero Rosario]'];
+
 /*******************************************************************************
  * Components *
  * 
@@ -157,31 +109,46 @@ var layer_region = ui.Map.Layer(styled_region, {}, 'Región de Valparaíso');
 c.map.layers().add(layer_region); //queda en posicion 1
 
 
-var init_year = '2019-2020';
+var init_year = '2019_2020';
 //probaremos con el agno 2017 primero
-var disp_year = ['2019-2020',
-                 '2020-2021', 
-                 '2021-2022',
-                 '2022-2023'];
+var disp_year = ['2019_2020',
+                 '2020_2021', 
+                 '2021_2022',
+                 '2022_2023'];
 
 
 // Define a data year selector widget group.
-c.selectYear = {};
-c.selectYear.label = ui.Label('Superficie Regada');
-c.selectYear.selector = ui.Select({
+c.selectSHAC = {};
+c.selectSHAC.label = ui.Label('Superficie Regada');
+c.selectSHAC.selector = ui.Select({
   items:shac_names,
   placeholder: 'Seleccione un SHAC',
-  onChange: function(selectedYear) {
+  onChange: function(selectedSHAC) {
+    print(c.map.layers());
+    // Reiniciar el selector de Band
+    c.selectBand.selector.setValue(null);
+    c.selectBand.selector.setDisabled(true);
+    var layers = c.map.layers();
+    for (var i = 0; i < layers.length(); i++) {
+      var layer = layers.get(i);
+      if (layer.getName() === 'lastHighlighted') {
+        c.map.remove(layer);
+        break;
+      }
+    }
 
-    var links = ImgClass.collection(selectedYear, '01/01/0101', disp_year)[0];
-    
-    Selectores.onChangeSelectedYear(c, links, selectedYear, s);
+
+    // Verificar si se ha seleccionado un SHAC
+    if (selectedSHAC) {
+      // Zoom hacia el SHAC
+      ShacClass.zoomSHAC(selectedSHAC, shac_layer, c.map);
+      // Habilitar el selector de Band si hay un SHAC seleccionado
+      c.selectBand.selector.setDisabled(false);
+    }
   }
-  
-  
 });
 
-c.selectYear.panel = ui.Panel([c.selectYear.label, c.selectYear.selector]);
+c.selectSHAC.panel = ui.Panel([c.selectSHAC.label, c.selectSHAC.selector]);
 c.downloadYear.panel = ui.Panel([c.downloadYear.title, 
                                   c.downloadYear.label1,
                                   c.downloadYear.label2,
@@ -198,6 +165,19 @@ c.selectBand = {};
 c.selectBand.selector = ui.Select({
   items: disp_year,
   placeholder: 'Seleccione una temporada',
+  disabled: true,
+  onChange: function(selectedBand) {
+
+      if (selectedBand) {
+      var link = ImgClass.collection(c.selectSHAC.selector.getValue(), selectedBand);
+      var downloadUrl = link.getDownloadURL({format: 'geojson'});
+      c.downloadBand.label.setValue('Descarga Geojson');
+      c.downloadBand.label.setUrl(downloadUrl);
+      c.downloadBand.label.style().set(s.ableLabel);
+      c.downloadBand.title.setValue('Descargar Superficie Regada');
+      c.downloadBand.title.style().set(s.widgetTitle);
+    }  //Selectores.onChangeSelectedYear(c, links, selectedYear, s);
+}
   
 });
 
@@ -307,7 +287,7 @@ c.frut.boton = ui.Button('Agregar capa catastro frutícola');
 
 c.controlPanel.add(c.info.panel);
 c.controlPanel.add(c.dividers.divider1);
-c.controlPanel.add(c.selectYear.panel);
+c.controlPanel.add(c.selectSHAC.panel);
 c.controlPanel.add(c.selectBand.panel);
 c.controlPanel.add(c.dividers.divider2);
 c.controlPanel.add(c.usoSuelo.label);
@@ -317,10 +297,9 @@ c.controlPanel.add(c.dividers.divider3);
 c.controlPanel.add(c.frut.label);
 c.controlPanel.add(c.frut.aboutLabel);
 c.controlPanel.add(c.frut.boton);
-
 //c.controlPanel.add(c.resetButton);
-//c.controlPanel.add(c.dividers.divider4);
-c.controlPanel.add(c.downloadYear.panel);
+c.controlPanel.add(c.dividers.divider4);
+//c.controlPanel.add(c.downloadYear.panel);
 c.controlPanel.add(c.downloadBand.panel);
 
 
@@ -377,8 +356,8 @@ c.info.paperLabel.style().set(s.smallBottomMargin);
 c.info.websiteLabel.style().set(s.aboutText);
 c.info.websiteLabel.style().set(s.noTopMargin);
 
-c.selectYear.selector.style().set(s.stretchHorizontal);
-c.selectYear.label.style().set(s.widgetTitle);
+c.selectSHAC.selector.style().set(s.stretchHorizontal);
+c.selectSHAC.label.style().set(s.widgetTitle);
 
 c.selectBand.selector.style().set(s.stretchHorizontal);
 c.usoSuelo.label.style().set(s.widgetTitle);
@@ -499,13 +478,13 @@ c.sensores.selector.onChange(function(nombreSeleccionado) {
 */
 
 function getSelectedYear() {
-  var agno_sel1 = c.selectYear.selector.getValue();
-  var days_agno = Selectores.getDateList(agno_sel1, disp_year);
-  c.selectBand.selector.items().reset(days_agno);
-  return days_agno;
+  var agno_sel1 = c.selectSHAC.selector.getValue();
+  //var days_agno = Selectores.getDateList(agno_sel1, disp_year);
+  //c.selectBand.selector.items().reset(days_agno);
+  //return days_agno;
 }
 
-c.selectYear.selector.onChange(getSelectedYear);
+c.selectSHAC.selector.onChange(getSelectedYear);
 
 
 
@@ -553,12 +532,19 @@ function handleMouseMove(coords) {
 }
 
 // Capturar eventos del ratón en la capa
-c.map.onClick(handleMouseMove);
+//c.map.onClick(handleMouseMove);
 
 c.map.onClick(function(coords) {
+    ShacClass.onClickSHAC(coords.lon, coords.lat, c,region, shac_layer);
+  });
+  
+  /*
+c.map.onClick(function(coords) {
+  
+  //1. Seleccionar un SHAC (funcion en Shacs.js)
   
   //esta funcion solo se debe activar si hay un año cargado
-  if(c.selectYear.selector.getValue() !== null) {
+  if(c.selectSHAC.selector.getValue() !== null) {
   //para agregar un punto donde clickeo el usuario
   var clickedPoint = ee.Geometry.Point(coords.lon, coords.lat);
   if (pointLayer) {
@@ -567,7 +553,7 @@ c.map.onClick(function(coords) {
   pointLayer = ui.Map.Layer(clickedPoint, {color: 'red'}, 'Punto seleccionado');
   
   
-  var valueDict = chartClass.Click(c.selectYear.selector.getValue(), coords, region);
+  var valueDict = chartClass.Click(c.selectSHAC.selector.getValue(), coords, region);
   chartClass.createChartOUT(c,valueDict);
   
   //if(c.selectBand.selector.getValue()!== null){
@@ -594,7 +580,7 @@ c.map.onClick(function(coords) {
   }
   
 );
-
+*/
 
 print(c);
 print(c.map.layers());
