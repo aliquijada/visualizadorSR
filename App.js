@@ -169,6 +169,8 @@ c.selectBand.selector = ui.Select({
   onChange: function(selectedBand) {
 
       if (selectedBand) {
+      
+      // 1. Agregar link de descarga
       var link = ImgClass.collection(c.selectSHAC.selector.getValue(), selectedBand);
       var downloadUrl = link.getDownloadURL({format: 'geojson'});
       c.downloadBand.label.setValue('Descarga Geojson');
@@ -176,7 +178,15 @@ c.selectBand.selector = ui.Select({
       c.downloadBand.label.style().set(s.ableLabel);
       c.downloadBand.title.setValue('Descargar Superficie Regada');
       c.downloadBand.title.style().set(s.widgetTitle);
-    }  //Selectores.onChangeSelectedYear(c, links, selectedYear, s);
+      
+      // 2. Agregar capa a mapa
+      
+        var layer = ui.Map.Layer(link, {},'Superficie regada');
+        
+        c.map.layers().set(2, layer); //se agrega a la tercera posicion y reemplaza la SHAC highlighted
+
+        
+      }  
 }
   
 });
