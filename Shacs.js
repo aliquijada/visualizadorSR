@@ -20,9 +20,57 @@ var extraerAtributo = function(feature) {
   var atributo = 'filename';
   return feature.get(atributo);
 };
+
+function insideRegion(point, region){
+
+// 2. Verificar que las coordenadas se encuentren en el terreno
+  var regionFirst = region.first();
+  var isInRegion = regionFirst.geometry().contains(point, ee.ErrorMargin(1)).getInfo();
+  if(isInRegion){
+    return true;
+  }else{
+    return false;
+  }
+}
+
 /*******************************************************************************
  ******************************************************************************/
 
+//1. Seleccionar un SHAC desde el mapa
+
+//1.1. Verificar que este dentro de la zona de la region
+//1.2. Resetear el valor de c.selectSHAC.selector
+//1.2. Cambiar valor de c.selectSHAC.selector
+
+function onClickSHAC(lon, lat, c, region, shac_layer) {
+
+  // Crear un punto con las coordenadas clicadas
+  var point = ee.Geometry.Point([lon, lat]);
+  
+  if(!insideRegion(point, region)){
+    print('El punto está fuera de la región.');
+    return null;
+  }
+
+  // Buscar el SHAC correspondiente en shac_layer
+  var shacFeature = shac_layer.filterBounds(point).first();
+  
+  shacFeature.evaluate(function(feature) {
+    if (feature) {
+      var shacValue = feature.properties.SHAC;
+      // Asignar el valor al ui.Select
+      c.selectSHAC.selector.items().reset([shacValue]);
+      c.selectSHAC.selector.setValue(shacValue);
+      //print('SHAC encontrado: ' + shacValue);
+    } else {
+      print('No se encontró SHAC en esta ubicación.');
+    }
+      });
+     
+  
+}
+
+exports.onClickSHAC = onClickSHAC;
 
 //importa el panel completo con todas las labels
 function updateTooltip(coords, shapefile, panel) {
@@ -100,30 +148,35 @@ function processAndUpdateLabels(point, shapefile, panel) {
 
 exports.updateTooltip = updateTooltip;
 
-function zoomSensor(nombreSeleccionado, map) {
-  var coords = nom_sensores.get(nombreSeleccionado);
-  // Evaluar el diccionario en el cliente
-  coords.evaluate(function(coordObj) {
-    if (coordObj) {
-      var lat = coordObj.lat;
-      var lon = coordObj.lon;
-      
-      if (!isNaN(lat) && !isNaN(lon)) {
-        var pointCoords = [lon, lat];
-        var punto = ee.Geometry.Point(pointCoords);
-        map.centerObject(punto, 15);
-      } else {
-        print('Coordenadas no válidas para el sensor:', nombreSeleccionado);
-      }
-    } else {
-      print('No se encontraron coordenadas para el sensor:', nombreSeleccionado);
-    }
-  });
+function zoomSHAC(nombreSeleccionado, shac_layer, map) {
+
+  // 2. Filtrar segun seleccionado
+  var shacFeature = shac_layer.filter(ee.Filter.eq('SHAC', nombreSeleccionado));
+
+  // 2.1. Obtener la geometría del SHAC filtrado
+  var geometria = shacFeature.geometry();
+
+  // 2.1. Verificar si se encontró la geometría
+  if (geometria) {
+    // 2.1.1. Hacer zoom a la geometría del SHAC en el mapa
+    var bbox = geometria.bounds();
+    
+    var highlightedStyle = {color: 'black', width: 3}; 
+    // Aplicar el estilo al SHAC seleccionado
+    var highlightedFeature = shacFeature.style(highlightedStyle);
+    
+    // Agregar el SHAC resaltado al mapa
+    map.addLayer(highlightedFeature, null, 'lastHighlighted');
+    map.centerObject(bbox);
+  } else {
+    print('No se encontró la geometría para el SHAC:', nombreSeleccionado);
+  }
+  
 }
 
 
 
-exports.zoomSensor = zoomSensor;
+exports.zoomSHAC = zoomSHAC;
 
 
 // Agregar una serie de tiempo al chart
