@@ -14,7 +14,7 @@ var ShacClass = require('users/aliciaquijadac/VisualizadorSR:Shacs.js');
 var s = require('users/aliciaquijadac/VisualizadorSR:Style.js').styles; 
 var c = {}; // Define a JSON object for storing UI components.
 var region = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Geometrias/Region_de_Valparaiso_4326_corregido");
-var shac_layer = ee.FeatureCollection("projects/ee-aliciaquijadac/assets/Geometrias/SHACs_V_Region");
+var shac_layer = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Geometrias/SHACs_V_Region");
 
 
 var shac_names = ['Melipilla','Puangue Alto','Lo Ovalle','Los Perales',
