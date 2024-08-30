@@ -173,7 +173,8 @@ function zoomSHAC(nombreSeleccionado, shac_layer, map) {
     // Agregar el SHAC resaltado al mapa
     //map.addLayer(highlightedFeature, null, 'lastHighlighted');
     
-    map.layers().set(2, highLayer);
+    //map.layers().set(2, highLayer);
+    map.layers().insert(2, highLayer);
     
     map.centerObject(bbox);
   } else {
