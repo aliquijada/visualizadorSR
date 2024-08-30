@@ -16,6 +16,24 @@ var c = {}; // Define a JSON object for storing UI components.
 var region = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Geometrias/Region_de_Valparaiso_4326_corregido");
 var shac_layer = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Geometrias/SHACs_V_Region");
 
+var uso_suelo = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/cut_valparaiso_2020");
+var uso_suelo_simp = uso_suelo.map(function(feature) {
+  return feature.simplify(1000); // Simplifica a 100 metros, por ejemplo
+});
+var styledUsoSuelo = uso_suelo_simp.style(s.usoSueloStyle);
+
+var us_Los_Andes = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_Los_Andes");
+var us_Marga_Marga = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_Marga_Marga");
+var us_Petorca = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_Petorca");
+var us_Quillota = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_Quillota");
+var us_San_Felipe = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_San_Felipe");
+var us_Valparaiso = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_Valparaiso");
+var us_San_Antonio = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_San_Antonio");
+
+
+
+var cat_frut = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Catastro_fruticola/prod_frutic_ide_05_2020_1_2");
+
 
 var shac_names = ['Melipilla','Puangue Alto','Lo Ovalle','Los Perales',
 'Lo Orozco','La Vinilla-Casablanca','Estero Papudo','La Laguna -  Catapilco',
@@ -86,20 +104,6 @@ c.info.panel = ui.Panel([
   c.info.paperLabel, c.info.websiteLabel
 ]);
 
-//Define a download per year widget group
-c.downloadYear = {};
-c.downloadYear.title = ui.Label();
-c.downloadYear.label1 = ui.Label();
-c.downloadYear.label2 = ui.Label();
-c.downloadYear.label3 = ui.Label();
-//arreglo temporal
-c.downloadYearlabels = [
-  c.downloadYear.label1,
-  c.downloadYear.label2,
-  c.downloadYear.label3,
-  c.downloadYear.label4
-];
-
 //posicion capas: [REGION, SHAC, SR|FRUT|SUELO]
 
 
@@ -125,9 +129,10 @@ c.selectSHAC.selector = ui.Select({
   placeholder: 'Seleccione un SHAC',
   onChange: function(selectedSHAC) {
     print(c.map.layers());
-    // Reiniciar el selector de Band
+    // 1. Reiniciar el selector de Band
     c.selectBand.selector.setValue(null);
     c.selectBand.selector.setDisabled(true);
+    // 2. Eliminar capa highlighted
     var layers = c.map.layers();
     for (var i = 0; i < layers.length(); i++) {
       var layer = layers.get(i);
@@ -136,25 +141,28 @@ c.selectSHAC.selector = ui.Select({
         break;
       }
     }
-
-
-    // Verificar si se ha seleccionado un SHAC
+    // 3. Zoom hacia SHAC y habilitar temporada
     if (selectedSHAC) {
       // Zoom hacia el SHAC
       ShacClass.zoomSHAC(selectedSHAC, shac_layer, c.map);
       // Habilitar el selector de Band si hay un SHAC seleccionado
       c.selectBand.selector.setDisabled(false);
     }
+    
+    // 4. Generar la URL de descarga para uso de suelo
+    var nameSHAC = selectedSHAC.split(' ').join('_');
+    var usSHAC = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_" + nameSHAC);
+    var downloadUrlUSSHAC = usSHAC.getDownloadURL({format: 'geojson'});
+
+    c.usoSuelo.download.setUrl(downloadUrlUSSHAC);
+    c.usoSuelo.download.style().set(s.ableLabel);
   }
 });
 
 c.selectSHAC.panel = ui.Panel([c.selectSHAC.label, c.selectSHAC.selector]);
-c.downloadYear.panel = ui.Panel([c.downloadYear.title, 
-                                  c.downloadYear.label1,
-                                  c.downloadYear.label2,
-                                  c.downloadYear.label3 ]);
 
-// Define a download per day widget group
+
+// Definir grupo de descarga para SR
 c.downloadBand = {}; //Etiqueta de descarga que se actualizará dinámicamente
 c.downloadBand.title = ui.Label('');
 c.downloadBand.label = ui.Label('');
@@ -182,7 +190,6 @@ c.selectBand.selector = ui.Select({
       // 2. Agregar capa a mapa
       
         var layer = ui.Map.Layer(link, {},'Superficie regada');
-        
         c.map.layers().set(2, layer); //se agrega a la tercera posicion y reemplaza la SHAC highlighted
 
         
@@ -228,12 +235,13 @@ var pointLayer = null;
 
 
 //Uso de Suelo
+
+
 c.usoSuelo = {};
 c.usoSuelo.label = ui.Label('Uso de suelo');
 c.usoSuelo.aboutLabel = ui.Label(
   'Información de la capa de uso de suelo ' +
   'capa actualizada a 2020.');
-
 c.usoSuelo.cerrar = ui.Button({
   label : 'Cerrar tabla',
   onClick: function() {
@@ -252,7 +260,34 @@ c.usoSuelo.panel = ui.Panel([
   c.usoSuelo.altitud,
   c.usoSuelo.lon,
   c.usoSuelo.lat]);
-c.usoSuelo.boton = ui.Button('Agregar capa de uso de suelo');
+c.usoSuelo.boton= ui.Button({
+  label : 'Agregar capa de uso de suelo',
+  onClick: function() {
+    var currentLabel = c.usoSuelo.boton.getLabel();
+    var layers = c.map.layers();
+    var n = layers.length();
+    
+  if (currentLabel === 'Agregar capa de uso de suelo') {
+      
+      var layer = ui.Map.Layer(styledUsoSuelo, {} ,'Uso de Suelo');
+      c.map.layers().set(n+1, layer); //se agrega a la ultima posicion 
+      c.usoSuelo.boton.setLabel('Quitar capa de uso de suelo');
+    } else {
+      for (var i = 0; i < layers.length(); i++) {
+        var layerI = layers.get(i);
+        if (layerI.getName() === 'Uso de Suelo') {
+          layers.remove(layerI);  
+        break;  
+      }
+    }
+      c.usoSuelo.boton.setLabel('Agregar capa de uso de suelo');
+    }
+  }
+});
+
+
+c.usoSuelo.download = ui.Label('Descarga uso de suelo SHAC');
+c.usoSuelo.download.style().set(s.disableLabel);
 
 //Catastro frutícola
 c.frut = {};
@@ -279,7 +314,35 @@ c.frut.panel = ui.Panel([
   c.frut.altitud,
   c.frut.lon,
   c.frut.lat]);
-c.frut.boton = ui.Button('Agregar capa catastro frutícola');
+c.frut.boton = ui.Button({
+  label : 'Agregar capa catastro frutícola',
+  onClick: function() {
+    var currentLabel = c.frut.boton.getLabel();
+    var layers = c.map.layers();
+    var n = layers.length();
+    
+  if (currentLabel === 'Agregar capa catastro frutícola') {
+      var layer = ui.Map.Layer(cat_frut, {},'Catastro Frutícola');
+      c.map.layers().set(n+1, layer); //se agrega a la ultima posicion 
+      c.frut.boton.setLabel('Quitar capa catastro frutícola');
+    } else {
+      for (var i = 0; i < layers.length(); i++) {
+        var layerI = layers.get(i);
+        if (layerI.getName() === 'Catastro Frutícola') {
+          layers.remove(layerI);  
+        break;  
+      }
+    }
+      c.frut.boton.setLabel('Agregar capa catastro frutícola');
+    }
+  }
+});
+
+c.frut.download = ui.Label('Descarga Catastro Frutícola');
+var downloadUrlFrut = cat_frut.getDownloadURL({format: 'shp'});
+c.frut.download.setUrl(downloadUrlFrut);
+c.frut.download.style().set(s.ableLabel);
+
 
 
 
@@ -303,10 +366,12 @@ c.controlPanel.add(c.dividers.divider2);
 c.controlPanel.add(c.usoSuelo.label);
 c.controlPanel.add(c.usoSuelo.aboutLabel);
 c.controlPanel.add(c.usoSuelo.boton);
+c.controlPanel.add(c.usoSuelo.download);
 c.controlPanel.add(c.dividers.divider3);
 c.controlPanel.add(c.frut.label);
 c.controlPanel.add(c.frut.aboutLabel);
 c.controlPanel.add(c.frut.boton);
+c.controlPanel.add(c.frut.download);
 //c.controlPanel.add(c.resetButton);
 c.controlPanel.add(c.dividers.divider4);
 //c.controlPanel.add(c.downloadYear.panel);
@@ -375,10 +440,6 @@ c.usoSuelo.boton.style().set(s.stretchHorizontal);
 c.frut.label.style().set(s.widgetTitle);
 c.frut.boton.style().set(s.stretchHorizontal);
 
-c.downloadYear.label1.style().set(s.disableLabel);
-c.downloadYear.label2.style().set(s.disableLabel);
-c.downloadYear.label3.style().set(s.disableLabel);
-c.downloadBand.label.style().set(s.disableLabel);
 c.controlPanel.style().set(s.controlPanel);
 
 c.map.style().set({
