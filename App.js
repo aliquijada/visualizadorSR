@@ -1,31 +1,3 @@
-
-/*******************************************************************************
- * Modulos *
- * Import all the modules from other scripts
- ******************************************************************************/
-var startTime = new Date().getTime();
-
-//var Selectores = require('users/corfobbppciren2023/App_HS_User:Selectores.js'); 
-var ImgClass = require('users/aliciaquijadac/VisualizadorSR:Img_collection.js'); 
-
-var catClass = require('users/aliciaquijadac/VisualizadorSR:CatastroFruticola.js'); 
-//var chartClass = require('users/corfobbppciren2023/App_HS_User:TimeSerie.js'); 
-var ShacClass = require('users/aliciaquijadac/VisualizadorSR:Shacs.js'); 
-//var Leyenda = require('users/corfobbppciren2023/App_HS_User:Leyenda.js'); 
-//var reset = require('users/corfobbppciren2023/App_HS_User:ResetButton.js'); 
-var s = require('users/aliciaquijadac/VisualizadorSR:Style.js').styles; 
-var c = {}; // Define a JSON object for storing UI components.
-var region = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Geometrias/Region_de_Valparaiso_4326_corregido");
-var shac_layer = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Geometrias/SHACs_V_Region");
-
-var uso_suelo = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/cut_valparaiso_2020");
-var uso_suelo_simp = uso_suelo.map(function(feature) {
-  return feature.simplify(1000); // Simplifica a 100 metros, por ejemplo
-});
-var styledUsoSuelo = uso_suelo.style(s.usoSueloStyle);
-
-var cat_frut = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Catastro_fruticola/prod_frutic_ide_05_2020_1_2");
-
 var shac_names = ['Melipilla','Puangue Alto','Lo Ovalle','Los Perales',
 'Lo Orozco','La Vinilla-Casablanca','Estero Papudo','La Laguna -  Catapilco',
 'Estero Cachagua','Estero Puchuncavi','Dunas de Quintero','Horcon',
@@ -48,6 +20,51 @@ var shac_names = ['Melipilla','Puangue Alto','Lo Ovalle','Los Perales',
 'Estero La Canela','Estero Pucalan','Quintay','El Tabo',
 'Estero El Rosario - Costeras V','Estero Laguna Verde','Yali Bajo El Prado',
 'Maitenlahue','Rio Rapel bajo junta estero Rosario]'];
+
+
+
+var ClaseStyles = ee.Dictionary({
+  'AREAS ARTIFICIALES': {color: '#FF5733'}, // Orange Red
+  'AREAS DESPROVISTAS DE VEGETACION': {color: '#F0E68C'}, // Khaki
+  'BOSQUES': {color: '#228B22'}, // Forest Green
+  'CUERPOS DE AGUA': {color: '#1E90FF'}, // Dodger Blue
+  'HUMEDALES': {color: '#40E0D0'}, // Turquoise
+  'NIEVES Y GLACIARES': {color: '#ADD8E6'}, // Light Blue
+  'PLANTACIONES FORESTALES': {color: '#6A5ACD'}, // Slate Blue
+  'PRADERAS Y MATORRALES': {color: '#98FB98'}, // Pale Green
+  'TERRENOS AGRICOLAS': {color: '#D2B48C'}  // Tan
+});
+/*******************************************************************************
+ * Modulos *
+ * Import all the modules from other scripts
+ ******************************************************************************/
+var startTime = new Date().getTime();
+
+//var Selectores = require('users/corfobbppciren2023/App_HS_User:Selectores.js'); 
+var ImgClass = require('users/aliciaquijadac/VisualizadorSR:Img_collection.js'); 
+
+var catClass = require('users/aliciaquijadac/VisualizadorSR:CatastroFruticola.js'); 
+//var chartClass = require('users/corfobbppciren2023/App_HS_User:TimeSerie.js'); 
+var ShacClass = require('users/aliciaquijadac/VisualizadorSR:Shacs.js'); 
+//var Leyenda = require('users/corfobbppciren2023/App_HS_User:Leyenda.js'); 
+//var reset = require('users/corfobbppciren2023/App_HS_User:ResetButton.js'); 
+var s = require('users/aliciaquijadac/VisualizadorSR:Style.js').styles; 
+var c = {}; // Define a JSON object for storing UI components.
+var region = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Geometrias/Region_de_Valparaiso_4326_corregido");
+var shac_layer = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Geometrias/SHACs_V_Region");
+
+var uso_suelo = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/cut_valparaiso_2020");
+
+uso_suelo = uso_suelo.map(function(feature) {
+  return feature.set('style', ClaseStyles.get(feature.get('CLASE')));
+});
+
+var styledUsoSuelo = uso_suelo.style({
+  styleProperty: 'style',
+});
+
+var cat_frut = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Catastro_fruticola/prod_frutic_ide_05_2020_1_2");
+
 
 /*******************************************************************************
  * Funciones internas *
