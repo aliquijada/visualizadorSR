@@ -136,20 +136,28 @@ var styles = {
   padding: '0px', 
   shown: false
   },
-  styleChartAxis : {
-    italic: false,
-    bold: true
-  },
-  styleChartArea : {
-    width: '600px',
-    height: '450px', // Valor para asegurar que se vea la fecha completa
-    margin: '0px',
-    padding: '0px'
-  },
   controlPanel: {
   width: '275px',
   padding: '0px'
-  }
+  },
+  usoSueloStyle : {
+  color: 'black',           
+  fillColor: '#F5F5DC',     
+  width: 0.26               
+  }, 
+  greyLabel: {
+      padding: '5px',
+      backgroundColor: '#D3D3D3',
+      margin: '1px', 
+      stretch: 'horizontal'
+    },
+  whiteLabel : {
+      padding: '5px',
+      backgroundColor: 'white',
+      margin: '1px',
+      stretch: 'horizontal'
+
+    }
 };
   
   
