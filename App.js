@@ -7,6 +7,8 @@ var startTime = new Date().getTime();
 
 //var Selectores = require('users/corfobbppciren2023/App_HS_User:Selectores.js'); 
 var ImgClass = require('users/aliciaquijadac/VisualizadorSR:Img_collection.js'); 
+
+var catClass = require('users/aliciaquijadac/VisualizadorSR:CatastroFruticola.js'); 
 //var chartClass = require('users/corfobbppciren2023/App_HS_User:TimeSerie.js'); 
 var ShacClass = require('users/aliciaquijadac/VisualizadorSR:Shacs.js'); 
 //var Leyenda = require('users/corfobbppciren2023/App_HS_User:Leyenda.js'); 
@@ -20,20 +22,9 @@ var uso_suelo = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_
 var uso_suelo_simp = uso_suelo.map(function(feature) {
   return feature.simplify(1000); // Simplifica a 100 metros, por ejemplo
 });
-var styledUsoSuelo = uso_suelo_simp.style(s.usoSueloStyle);
-
-var us_Los_Andes = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_Los_Andes");
-var us_Marga_Marga = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_Marga_Marga");
-var us_Petorca = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_Petorca");
-var us_Quillota = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_Quillota");
-var us_San_Felipe = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_San_Felipe");
-var us_Valparaiso = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_Valparaiso");
-var us_San_Antonio = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_San_Antonio");
-
-
+var styledUsoSuelo = uso_suelo.style(s.usoSueloStyle);
 
 var cat_frut = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Catastro_fruticola/prod_frutic_ide_05_2020_1_2");
-
 
 var shac_names = ['Melipilla','Puangue Alto','Lo Ovalle','Los Perales',
 'Lo Orozco','La Vinilla-Casablanca','Estero Papudo','La Laguna -  Catapilco',
@@ -57,6 +48,25 @@ var shac_names = ['Melipilla','Puangue Alto','Lo Ovalle','Los Perales',
 'Estero La Canela','Estero Pucalan','Quintay','El Tabo',
 'Estero El Rosario - Costeras V','Estero Laguna Verde','Yali Bajo El Prado',
 'Maitenlahue','Rio Rapel bajo junta estero Rosario]'];
+
+/*******************************************************************************
+ * Funciones internas *
+ * 
+ * Una sección para definir las funciones que se utilizaran internamente
+ ******************************************************************************/
+
+
+function layerExists(layers, layerName) {
+  var exists = false;
+
+  layers.forEach(function(layer) {
+    if (layer.getName() === layerName) {  // Comprobar si el nombre coincide
+      exists = true;
+    }
+  });
+  
+  return exists;
+}
 
 /*******************************************************************************
  * Components *
@@ -128,7 +138,6 @@ c.selectSHAC.selector = ui.Select({
   items:shac_names,
   placeholder: 'Seleccione un SHAC',
   onChange: function(selectedSHAC) {
-    print(c.map.layers());
     // 1. Reiniciar el selector de Band
     c.selectBand.selector.setValue(null);
     c.selectBand.selector.setDisabled(true);
@@ -142,20 +151,23 @@ c.selectSHAC.selector = ui.Select({
       }
     }
     // 3. Zoom hacia SHAC y habilitar temporada
-    if (selectedSHAC) {
+    var valueLabel = c.frut.com.getValue(); //label para comparar si se agrego la tab. cat. Frut
+    var catFrutExist = layerExists(layers, 'Catastro Frutícola');
+    if (selectedSHAC && !catFrutExist) {
+
       // Zoom hacia el SHAC
       ShacClass.zoomSHAC(selectedSHAC, shac_layer, c.map);
       // Habilitar el selector de Band si hay un SHAC seleccionado
       c.selectBand.selector.setDisabled(false);
     }
-    
-    // 4. Generar la URL de descarga para uso de suelo
+   
+    // 4. Generar la URL de descarga para uso de suelo.
+    /*
+    c.usoSuelo.boton.setDisabled(false);
     var nameSHAC = selectedSHAC.split(' ').join('_');
     var usSHAC = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Uso_de_Suelo/uso_suelo_" + nameSHAC);
     var downloadUrlUSSHAC = usSHAC.getDownloadURL({format: 'geojson'});
-
-    c.usoSuelo.download.setUrl(downloadUrlUSSHAC);
-    c.usoSuelo.download.style().set(s.ableLabel);
+  */
   }
 });
 
@@ -173,7 +185,6 @@ c.selectBand = {};
 c.selectBand.selector = ui.Select({
   items: disp_year,
   placeholder: 'Seleccione una temporada',
-  disabled: true,
   onChange: function(selectedBand) {
 
       if (selectedBand) {
@@ -241,9 +252,10 @@ c.usoSuelo = {};
 c.usoSuelo.label = ui.Label('Uso de suelo');
 c.usoSuelo.aboutLabel = ui.Label(
   'Información de la capa de uso de suelo ' +
-  'capa actualizada a 2020.');
+  'para el SHAC seleccionado (Capa actualizada hasta el año 2020).');
 c.usoSuelo.cerrar = ui.Button({
   label : 'Cerrar tabla',
+  disabled: true,
   onClick: function() {
     c.sensores.panel.style().set('shown', false);
   }
@@ -286,9 +298,6 @@ c.usoSuelo.boton= ui.Button({
 });
 
 
-c.usoSuelo.download = ui.Label('Descarga uso de suelo SHAC');
-c.usoSuelo.download.style().set(s.disableLabel);
-
 //Catastro frutícola
 c.frut = {};
 c.frut.label = ui.Label('Catastro frutícola');
@@ -298,22 +307,44 @@ c.frut.aboutLabel = ui.Label(
 
 c.frut.cerrar = ui.Button({
   label : 'Cerrar tabla',
+  style: s.stretchHorizontal,
   onClick: function() {
-    c.sensores.panel.style().set('shown', false);
-  }
+    c.frut.panel.style().set('shown', false);
+  }});
+  
+c.frut.buttonPanel = ui.Panel({
+  widgets: [c.frut.cerrar],
 });
-c.frut.nom_sensor = ui.Label('Nombre sensor:');
-c.frut.localidad = ui.Label('Localidad:');
-c.frut.altitud = ui.Label('Altitud');
-c.frut.lon = ui.Label('Lon:');
-c.frut.lat= ui.Label('Lat:');
-c.frut.panel = ui.Panel([
-  c.frut.cerrar,
-  c.frut.nom_sensor, 
-  c.frut.localidad,
-  c.frut.altitud,
-  c.frut.lon,
-  c.frut.lat]);
+c.frut.dynamicPanel = ui.Panel({
+  // Panel para almacenar la informacion a presentar
+  widgets: [],
+});
+c.frut.com = ui.Label('');
+c.frut.esp1 = ui.Label('');
+c.frut.arb1 = ui.Label('');
+c.frut.sup1 = ui.Label('');
+c.frut.esp2 = ui.Label('');
+c.frut.arb2 = ui.Label('');
+c.frut.sup2 = ui.Label('');
+c.frut.esp3 = ui.Label('');
+c.frut.arb3 = ui.Label('');
+c.frut.sup3 = ui.Label('');
+c.frut.esp4 = ui.Label('');
+c.frut.arb4 = ui.Label('');
+c.frut.sup4 = ui.Label('');
+c.frut.pan1 = ui.Panel({style: {border: '1px solid black'}});
+c.frut.pan2 = ui.Panel({style: {border: '1px solid black'}});
+c.frut.pan3 = ui.Panel({style: {border: '1px solid black'}});
+c.frut.pan4 = ui.Panel({style: {border: '1px solid black'}});
+
+c.frut.panel = ui.Panel({
+  widgets: [c.frut.buttonPanel, c.frut.dynamicPanel],
+});
+c.frut.panel.style().set('shown', false);
+c.frut.panel.style().set(s.opacityWhiteMed);
+
+
+
 c.frut.boton = ui.Button({
   label : 'Agregar capa catastro frutícola',
   onClick: function() {
@@ -338,10 +369,6 @@ c.frut.boton = ui.Button({
   }
 });
 
-c.frut.download = ui.Label('Descarga Catastro Frutícola');
-var downloadUrlFrut = cat_frut.getDownloadURL({format: 'shp'});
-c.frut.download.setUrl(downloadUrlFrut);
-c.frut.download.style().set(s.ableLabel);
 
 
 
@@ -366,12 +393,10 @@ c.controlPanel.add(c.dividers.divider2);
 c.controlPanel.add(c.usoSuelo.label);
 c.controlPanel.add(c.usoSuelo.aboutLabel);
 c.controlPanel.add(c.usoSuelo.boton);
-c.controlPanel.add(c.usoSuelo.download);
 c.controlPanel.add(c.dividers.divider3);
 c.controlPanel.add(c.frut.label);
 c.controlPanel.add(c.frut.aboutLabel);
 c.controlPanel.add(c.frut.boton);
-c.controlPanel.add(c.frut.download);
 //c.controlPanel.add(c.resetButton);
 c.controlPanel.add(c.dividers.divider4);
 //c.controlPanel.add(c.downloadYear.panel);
@@ -385,7 +410,7 @@ c.infoTable.add(humRow);
 c.infoTable.add(dateRow);
 
 
-c.map.add(c.infoTable);
+c.map.add(c.frut.panel);
 
 
 
@@ -464,6 +489,19 @@ c.usoSuelo.altitud.style().set(s.labelTabla1);
 c.usoSuelo.lon.style().set(s.labelTabla2);
 c.usoSuelo.lat.style().set(s.labelTabla1);
 
+c.frut.com.style().set(s.whiteLabel);
+c.frut.esp1.style().set(s.greyLabel);
+c.frut.arb1.style().set(s.whiteLabel);
+c.frut.sup1.style().set(s.greyLabel);
+c.frut.esp2.style().set(s.whiteLabel);
+c.frut.arb2.style().set(s.greyLabel);
+c.frut.sup2.style().set(s.whiteLabel);
+c.frut.esp3.style().set(s.greyLabel);
+c.frut.arb3.style().set(s.whiteLabel);
+c.frut.sup3.style().set(s.greyLabel);
+c.frut.esp4.style().set(s.whiteLabel);
+c.frut.arb4.style().set(s.greyLabel);
+c.frut.sup4.style().set(s.whiteLabel);
 //c.resetButton.style().set(s.stretchHorizontal);
 
 // Loop through setting divider style.
@@ -606,23 +644,43 @@ function handleMouseMove(coords) {
 //c.map.onClick(handleMouseMove);
 
 c.map.onClick(function(coords) {
+  
+    var actualLayers = c.map.layers();
+    var clickedPoint = ee.Geometry.Point(coords.lon, coords.lat);
+    
+    // 1. Seleccionar SHAC
     ShacClass.onClickSHAC(coords.lon, coords.lat, c,region, shac_layer);
-  });
+  
+    // 2. Remover punto anterior y Colocar punto 
+    
+    if (pointLayer) {
+      actualLayers.remove(pointLayer); // Remove the previous point layer
+    }
+    pointLayer = ui.Map.Layer(clickedPoint, {color: 'red'}, 'Punto seleccionado');
+    actualLayers.add(pointLayer);
+    
+    // 3. Agregar tabla de cat. fruticola
+    var catFrutExist = layerExists(actualLayers, 'Catastro Frutícola');
+    if (catFrutExist) { //si existe e intersecta con el valor
+      catClass.actualizarCatFrut(clickedPoint, cat_frut,c);
+      // Actualizar las etiquetas con los valores retornados
+      //latRow.widgets().get(1).setValue(values.lat);
+      //lonRow.widgets().get(1).setValue(values.lon);
+      //humRow.widgets().get(1).setValue(values.hs);
+      //dateRow.widgets().get(1).setValue(values.newDate);
+      
+      // Mostrar el panel
+      //c.frut.panel.style().set('shown', true);
+      //c.frut.panel.style().set('position', 'bottom-left');
+    } else {
+      // Si no hay datos para las coordenadas clickeadas, esconder el panel
+      c.frut.panel.style().set('shown', false);
+
+  
+}});
   
   /*
 c.map.onClick(function(coords) {
-  
-  //1. Seleccionar un SHAC (funcion en Shacs.js)
-  
-  //esta funcion solo se debe activar si hay un año cargado
-  if(c.selectSHAC.selector.getValue() !== null) {
-  //para agregar un punto donde clickeo el usuario
-  var clickedPoint = ee.Geometry.Point(coords.lon, coords.lat);
-  if (pointLayer) {
-    c.map.layers().remove(pointLayer); // Remove the previous point layer
-  }
-  pointLayer = ui.Map.Layer(clickedPoint, {color: 'red'}, 'Punto seleccionado');
-  
   
   var valueDict = chartClass.Click(c.selectSHAC.selector.getValue(), coords, region);
   chartClass.createChartOUT(c,valueDict);
@@ -645,16 +703,13 @@ c.map.onClick(function(coords) {
     }
   });
   
-  if(valueDict){
-    c.map.layers().add(pointLayer);
-  }}  
+  }  
   }
   
 );
 */
 
 print(c);
-print(c.map.layers());
 var endTime = new Date().getTime();
 
 var executionTime = endTime - startTime;
