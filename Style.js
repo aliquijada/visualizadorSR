@@ -149,15 +149,21 @@ var styles = {
       padding: '5px',
       backgroundColor: '#D3D3D3',
       margin: '1px', 
-      stretch: 'horizontal'
+      stretch: 'horizontal',
+      fontSize: '12px'
     },
   whiteLabel : {
       padding: '5px',
       backgroundColor: 'white',
       margin: '1px',
-      stretch: 'horizontal'
-
-    }
+      stretch: 'horizontal',
+      fontSize: '12px'
+    },
+  catFrutStyle : {
+    color: 'black',            // Border color (black)
+    fillColor: '#FFDF00',          
+    width: 1               
+  },
 };
   
   
