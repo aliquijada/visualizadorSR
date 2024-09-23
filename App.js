@@ -34,20 +34,21 @@ var ClaseStyles = ee.Dictionary({
   'PRADERAS Y MATORRALES': {color: '#98FB98'}, // Pale Green
   'TERRENOS AGRICOLAS': {color: '#D2B48C'}  // Tan
 });
+
 /*******************************************************************************
  * Modulos *
  * Import all the modules from other scripts
  ******************************************************************************/
 var startTime = new Date().getTime();
 
-//var Selectores = require('users/corfobbppciren2023/App_HS_User:Selectores.js'); 
 var ImgClass = require('users/aliciaquijadac/VisualizadorSR:Img_collection.js'); 
 
 var catClass = require('users/aliciaquijadac/VisualizadorSR:CatastroFruticola.js'); 
-//var chartClass = require('users/corfobbppciren2023/App_HS_User:TimeSerie.js'); 
+var usoClass = require('users/aliciaquijadac/VisualizadorSR:usoSuelo.js'); 
+
 var ShacClass = require('users/aliciaquijadac/VisualizadorSR:Shacs.js'); 
-//var Leyenda = require('users/corfobbppciren2023/App_HS_User:Leyenda.js'); 
-//var reset = require('users/corfobbppciren2023/App_HS_User:ResetButton.js'); 
+var legends = require('users/aliciaquijadac/VisualizadorSR:Legend.js');
+
 var s = require('users/aliciaquijadac/VisualizadorSR:Style.js').styles; 
 var c = {}; // Define a JSON object for storing UI components.
 var region = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Geometrias/Region_de_Valparaiso_4326_corregido");
@@ -63,8 +64,9 @@ var styledUsoSuelo = uso_suelo.style({
   styleProperty: 'style',
 });
 
-var cat_frut = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Catastro_fruticola/prod_frutic_ide_05_2020_1_2");
+var Rcat_frut = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Catastro_fruticola/prod_frutic_ide_05_2020_1_2");
 
+var cat_frut = Rcat_frut.style(s.catFrutStyle);
 
 /*******************************************************************************
  * Funciones internas *
@@ -72,13 +74,12 @@ var cat_frut = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/Catas
  * Una sección para definir las funciones que se utilizaran internamente
  ******************************************************************************/
 
-
 function layerExists(layers, layerName) {
   var exists = false;
-
   layers.forEach(function(layer) {
-    if (layer.getName() === layerName) {  // Comprobar si el nombre coincide
+    if (layer.getName() === layerName && layer.getShown()) {  // Comprobar si el nombre coincide
       exists = true;
+      
     }
   });
   
@@ -128,7 +129,7 @@ c.info.websiteLabel = ui.Label({
 });
 c.info.panel = ui.Panel([
   c.info.titleLabel, c.info.aboutLabel,
-  c.info.paperLabel, c.info.websiteLabel
+  //c.info.paperLabel, c.info.websiteLabel
 ]);
 
 //posicion capas: [REGION, SHAC, SR|FRUT|SUELO]
@@ -190,14 +191,13 @@ c.selectSHAC.selector = ui.Select({
 
 c.selectSHAC.panel = ui.Panel([c.selectSHAC.label, c.selectSHAC.selector]);
 
-
 // Definir grupo de descarga para SR
 c.downloadBand = {}; //Etiqueta de descarga que se actualizará dinámicamente
 c.downloadBand.title = ui.Label('');
 c.downloadBand.label = ui.Label('');
 
 // Define a data band selector widget group.
-//inicializamos en el 2023
+
 c.selectBand = {};
 c.selectBand.selector = ui.Select({
   items: disp_year,
@@ -231,88 +231,89 @@ c.selectBand.panel = ui.Panel([ c.selectBand.selector]);
 c.downloadBand.panel = ui.Panel([c.downloadBand.title, c.downloadBand.label ]);
 
 
-
-// Widgets del mapa
-
-//hay dos tablas informativas: uso de suelo y catastro frutícola
-
-c.infoTable = ui.Panel({
-  layout: ui.Panel.Layout.flow('vertical'),
-  style: {
-    shown: false  // Esconder el panel inicialmente
-  }}); //panel con información onClick 
-
-// Crear un botón de cerrar
-var closeButton = ui.Button({
-  label : 'Cerrar tabla',
-  onClick: function() {
-    c.infoTable.style().set('shown', false);
-  }
-});
-
-
-// Crear las filas con etiquetas vacías que se actualizarán más tarde
-var latRow = createRow('Latitud', '', 'white');
-var lonRow = createRow('Longitud', '', '#D3D3D3');
-var humRow = createRow('Humedad (%)', '', 'white');
-var dateRow = createRow('Fecha', '', '#D3D3D3');
-
-
 //Point for onClick function
 var pointLayer = null;
 
 
 //Uso de Suelo
-
-
 c.usoSuelo = {};
+c.usoSuelo.legend = legends.createUsoSueloLegend();
 c.usoSuelo.label = ui.Label('Uso de suelo');
 c.usoSuelo.aboutLabel = ui.Label(
   'Información de la capa de uso de suelo ' +
   'para el SHAC seleccionado (Capa actualizada hasta el año 2020).');
 c.usoSuelo.cerrar = ui.Button({
-  label : 'Cerrar tabla',
-  disabled: true,
+  label : 'Cerrar tabla Uso de Suelo',
+  style: {stretch: 'horizontal', fontSize: '12px', padding: '1px'},
   onClick: function() {
-    c.sensores.panel.style().set('shown', false);
-  }
+    c.usoSuelo.panel.style().set('shown', false);
+  }});
+  
+c.usoSuelo.buttonPanel = ui.Panel({
+  widgets: [c.usoSuelo.cerrar],
 });
-c.usoSuelo.nom_sensor = ui.Label('Nombre sensor:');
-c.usoSuelo.localidad = ui.Label('Localidad:');
-c.usoSuelo.altitud = ui.Label('Altitud');
-c.usoSuelo.lon = ui.Label('Lon:');
-c.usoSuelo.lat= ui.Label('Lat:');
-c.usoSuelo.panel = ui.Panel([
-  c.usoSuelo.cerrar,
-  c.usoSuelo.nom_sensor, 
-  c.usoSuelo.localidad,
-  c.usoSuelo.altitud,
-  c.usoSuelo.lon,
-  c.usoSuelo.lat]);
+c.usoSuelo.dynamicPanel = ui.Panel({
+  // Panel para almacenar la informacion a presentar
+  widgets: [],
+});
+c.usoSuelo.clase = ui.Label('');
+c.usoSuelo.uso = ui.Label('');
+c.usoSuelo.tipo = ui.Label('');
+c.usoSuelo.esp1 = ui.Label('');
+c.usoSuelo.esp2 = ui.Label('');
+c.usoSuelo.esp3 = ui.Label('');
+c.usoSuelo.esp4 = ui.Label('');
+c.usoSuelo.esp5 = ui.Label('');
+c.usoSuelo.esp6 = ui.Label('');
+c.usoSuelo.variedad= ui.Label('');
+c.usoSuelo.com =ui.Label('');
+c.usoSuelo.prov =ui.Label('');
+c.usoSuelo.ori =ui.Label('');
+c.usoSuelo.pan1 = ui.Panel({style: {border: '1px solid black'}});
+
+c.usoSuelo.panel = ui.Panel({
+  widgets: [c.usoSuelo.buttonPanel, c.usoSuelo.dynamicPanel]});
+c.usoSuelo.panel.style().set('shown', false);
+
+
 c.usoSuelo.boton= ui.Button({
   label : 'Agregar capa de uso de suelo',
   onClick: function() {
     var currentLabel = c.usoSuelo.boton.getLabel();
     var layers = c.map.layers();
     var n = layers.length();
-    
+    var usExist = layerExists(layers, 'Uso de Suelo');
+    var layer = ui.Map.Layer(styledUsoSuelo, {} ,'Uso de Suelo');
   if (currentLabel === 'Agregar capa de uso de suelo') {
-      
-      var layer = ui.Map.Layer(styledUsoSuelo, {} ,'Uso de Suelo');
-      c.map.layers().set(n+1, layer); //se agrega a la ultima posicion 
+    
+      c.usoSuelo.legend.style().set('shown', true);
       c.usoSuelo.boton.setLabel('Quitar capa de uso de suelo');
-    } else {
-      for (var i = 0; i < layers.length(); i++) {
-        var layerI = layers.get(i);
-        if (layerI.getName() === 'Uso de Suelo') {
-          layers.remove(layerI);  
-        break;  
+      if (!usExist){
+      c.map.layers().set(n+1, layer); //se agrega a la ultima posicion 
       }
-    }
+      else {
+
+        layers.forEach(function(existingLayer) {
+          if (existingLayer.getName() === 'Uso de Suelo') {
+            existingLayer.setShown(true);
+
+          }
+        });
+      }
+    } 
+    else {
+      layers.forEach(function(existingLayer) {
+          if (existingLayer.getName() === 'Uso de Suelo') {
+            existingLayer.setShown(false);
+          }
+        });
       c.usoSuelo.boton.setLabel('Agregar capa de uso de suelo');
+      c.usoSuelo.legend.style().set('shown', false);
     }
   }
 });
+
+
 
 
 //Catastro frutícola
@@ -323,8 +324,8 @@ c.frut.aboutLabel = ui.Label(
   'capa actualizada a 2020.');
 
 c.frut.cerrar = ui.Button({
-  label : 'Cerrar tabla',
-  style: s.stretchHorizontal,
+  label : 'Cerrar tabla Cat. Frutícola',
+  style: {stretch: 'horizontal', fontSize: '12px', padding: '1px'},
   onClick: function() {
     c.frut.panel.style().set('shown', false);
   }});
@@ -355,42 +356,51 @@ c.frut.pan3 = ui.Panel({style: {border: '1px solid black'}});
 c.frut.pan4 = ui.Panel({style: {border: '1px solid black'}});
 
 c.frut.panel = ui.Panel({
-  widgets: [c.frut.buttonPanel, c.frut.dynamicPanel],
-});
+  widgets: [c.frut.buttonPanel, c.frut.dynamicPanel]});
 c.frut.panel.style().set('shown', false);
-c.frut.panel.style().set(s.opacityWhiteMed);
-
 
 
 c.frut.boton = ui.Button({
-  label : 'Agregar capa catastro frutícola',
+  label: 'Agregar capa catastro frutícola',
   onClick: function() {
     var currentLabel = c.frut.boton.getLabel();
     var layers = c.map.layers();
     var n = layers.length();
+    var catFrutExist = layerExists(layers, 'Catastro Frutícola');
     
-  if (currentLabel === 'Agregar capa catastro frutícola') {
-      var layer = ui.Map.Layer(cat_frut, {},'Catastro Frutícola');
-      c.map.layers().set(n+1, layer); //se agrega a la ultima posicion 
+    if (currentLabel === 'Agregar capa catastro frutícola') {
+      // Check if the layer already exists
+      if (!catFrutExist) {
+        var layer = ui.Map.Layer(cat_frut, {}, 'Catastro Frutícola');
+        c.map.layers().set(n, layer); // Add to the last position
+      } else {
+        layers.forEach(function(existingLayer) {
+          if (existingLayer.getName() === 'Catastro Frutícola') {
+            existingLayer.setShown(true);
+          }
+        });
+      }
       c.frut.boton.setLabel('Quitar capa catastro frutícola');
     } else {
-      for (var i = 0; i < layers.length(); i++) {
-        var layerI = layers.get(i);
-        if (layerI.getName() === 'Catastro Frutícola') {
-          layers.remove(layerI);  
-        break;  
-      }
-    }
+      layers.forEach(function(existingLayer) {
+        if (existingLayer.getName() === 'Catastro Frutícola') {
+          existingLayer.setShown(false);
+        }
+      });
       c.frut.boton.setLabel('Agregar capa catastro frutícola');
     }
   }
 });
 
 
+//reset
+c.resetButton = ui.Button({
+  label : 'Borrar selecciones',
+  onClick: function() {
+    borrarSeleccion();
+    print('click');//c.usoSuelo.panel.style().set('shown', false);
+  }});
 
-
-
-//c.resetButton = ui.Button('Borrar Selección');
 /*******************************************************************************
  * Composition *
  * 
@@ -414,32 +424,21 @@ c.controlPanel.add(c.dividers.divider3);
 c.controlPanel.add(c.frut.label);
 c.controlPanel.add(c.frut.aboutLabel);
 c.controlPanel.add(c.frut.boton);
-//c.controlPanel.add(c.resetButton);
 c.controlPanel.add(c.dividers.divider4);
-//c.controlPanel.add(c.downloadYear.panel);
+c.controlPanel.add(c.resetButton);
 c.controlPanel.add(c.downloadBand.panel);
 
-
-c.infoTable.add(closeButton);
-c.infoTable.add(latRow);
-c.infoTable.add(lonRow);
-c.infoTable.add(humRow);
-c.infoTable.add(dateRow);
-
-
 c.map.add(c.frut.panel);
+c.map.add(c.usoSuelo.legend);
+c.map.setControlVisibility({'layerList':false}); //Oculta el layer control
 
 
-
-
-//capa sensores
 
 var senVis = shac_layer.style({
-  color: '1e90ff',
-  width: 2,
-  fillColor: 'ff475788',
-  pointSize: 7,
-  pointShape: 'circle'
+  color: 'black', // Color gris para el borde
+  width: 1.5,        // Ancho del borde
+  fillColor: '00000000', // Sin color de relleno (transparente)
+  lineType: 'dashed' // Tipo de línea punteada
 });
 
 var layerSensor = ui.Map.Layer(shac_layer,senVis, 'SHACS');
@@ -490,22 +489,27 @@ c.map.style().set({
 
 c.map.setOptions('SATELLITE');
 
-
-c.infoTable.style().set(s.opacityWhiteMed);
-closeButton.style().set(s.buttonStyle);
-
 c.usoSuelo.boton.style().set(s.widgetTitle);
 c.usoSuelo.aboutLabel.style().set(s.aboutText);
 c.usoSuelo.cerrar.style().set(s.buttonStyle);
-c.usoSuelo.panel.style().set(s.infoTable);
 c.usoSuelo.panel.style().set(s.opacityWhiteMed);
-c.usoSuelo.panel.style().set({position: 'top-right'});
-c.usoSuelo.nom_sensor.style().set(s.labelTabla1);
-c.usoSuelo.localidad.style().set(s.labelTabla2);
-c.usoSuelo.altitud.style().set(s.labelTabla1);
-c.usoSuelo.lon.style().set(s.labelTabla2);
-c.usoSuelo.lat.style().set(s.labelTabla1);
+c.usoSuelo.panel.style().set({position: 'top-left'});
 
+c.usoSuelo.ori.style().set(s.greyLabel);
+c.usoSuelo.com.style().set(s.whiteLabel);
+c.usoSuelo.prov.style().set(s.greyLabel);
+c.usoSuelo.uso.style().set(s.whiteLabel);
+c.usoSuelo.tipo.style().set(s.greyLabel);
+c.usoSuelo.variedad.style().set(s.whiteLabel);
+c.usoSuelo.esp1.style().set(s.greyLabel);
+c.usoSuelo.esp2.style().set(s.whiteLabel);
+c.usoSuelo.esp3.style().set(s.greyLabel);
+c.usoSuelo.esp4.style().set(s.whiteLabel);
+c.usoSuelo.esp5.style().set(s.greyLabel);
+c.usoSuelo.esp6.style().set(s.whiteLabel);
+
+c.frut.panel.style().set(s.opacityWhiteMed);
+c.frut.panel.style().set({position: 'bottom-left'});
 c.frut.com.style().set(s.whiteLabel);
 c.frut.esp1.style().set(s.greyLabel);
 c.frut.arb1.style().set(s.whiteLabel);
@@ -519,7 +523,7 @@ c.frut.sup3.style().set(s.greyLabel);
 c.frut.esp4.style().set(s.whiteLabel);
 c.frut.arb4.style().set(s.greyLabel);
 c.frut.sup4.style().set(s.whiteLabel);
-//c.resetButton.style().set(s.stretchHorizontal);
+c.resetButton.style().set(s.stretchHorizontal);
 
 // Loop through setting divider style.
 Object.keys(c.dividers).forEach(function(key) {
@@ -540,68 +544,69 @@ Object.keys(c.dividers).forEach(function(key) {
  * 3. As much as possible, include callbacks that update URL parameters.
  ******************************************************************************/
 
-//c.resetButton.onClick(reset.borrarSeleccion(c,s, layerDummy, pointLayer));
 
-/*
+
 function borrarSeleccion(){
- c.selectYear.selector.setValue(null, false);
-    c.selectBand.selector.setValue(null, false);
-    c.sensores.selector.setValue(null, false);
-
-    // 2. Ocultar las descargas
-    c.downloadYear.title.setValue('');
-    DownloadYearlabels.forEach(function(label) {
-        label.setValue('');
-        label.setUrl('');
-        label.style().set(s.disableLabel);
-    });
-    c.downloadBand.title.setValue('');
-    c.downloadBand.label.setValue('');
-    c.downloadBand.label.setUrl('');
-    c.downloadBand.label.style().set(s.disableLabel);
-
-    // 3. Restaurar el mapa al estado inicial (posición y zoom).
-    c.map.setCenter({
-        lon: ui.url.get('lon', -70.3), // Coordenadas iniciales
-        lat: ui.url.get('lat', -32.9),
-        zoom: ui.url.get('zoom', 8)
+  var actualLayers = c.map.layers();
+  var shac =c.selectSHAC.selector.getValue();
+  var temp = c.selectBand.selector.getValue();
+  var catFrutExist = layerExists(actualLayers, 'Catastro Frutícola');
+  var usoSueloExist = layerExists(actualLayers, 'Uso de Suelo');
+  
+  //1. Recentrar
+  c.map.setCenter({
+  lon: ui.url.get('lon', -70.3),
+  lat: ui.url.get('lat', -32.9),
+  zoom: ui.url.get('zoom', 8)
     });
 
-    // 4. Limpiar capas adicionales en el mapa, excepto las iniciales.
-    c.map.layers().set(0, layerDummy); // Eliminar capa de humedad del suelo
-    c.map.layers().set(1, layer_region); // Restaurar capa de región
-    c.map.layers().remove(pointLayer); // Eliminar el punto de clic, si existe
-    
-    // 5. Ocultar elementos adicionales (gráficos, tablas, leyendas).
-    c.chart.chartPanel.style().set('shown', false);
-    c.infoTable.style().set('shown', false);
-    c.legend.panel.style().set('shown', false);
-    c.sensores.panel.style().set('shown', false);
-    
-    // Limpiar el panel de sensores
-    c.sensores.nom_sensor.setValue('Nombre sensor:');
-    c.sensores.localidad.setValue('Localidad:');
-    c.sensores.altitud.setValue('Altitud');
-    c.sensores.lon.setValue('Lon:');
-    c.sensores.lat.setValue('Lat:');
+ //2. SHAC
+ if(shac!== null){
+  c.selectSHAC.selector.setValue(null);
+ }
+ // 3. Punto rojo
+  if (pointLayer) {
+      actualLayers.remove(pointLayer); // Remove the previous point layer
+  }
+  // 4. Temporada
+  if(temp!== null){
+    c.selectBand.selector.setValue(null);
+    for (var i = 0; i < actualLayers.length(); i++) {
+      var layer = actualLayers.get(i);
+      if (layer.getName() === 'Superficie regada') {
+        c.map.remove(layer);
+        break;
+      }
+    }
+    c.downloadBand.panel.clear(); 
+  }
+  
+  // 5. Uso de Suelo
+  if(usoSueloExist){
+    c.usoSuelo.legend.style().set('shown', false);
+    c.usoSuelo.boton.setLabel('Agregar capa de uso de suelo');
+    c.usoSuelo.panel.style().set('shown', false);
+     actualLayers.forEach(function(existingLayer) {
+          if (existingLayer.getName() === 'Uso de Suelo') {
+            existingLayer.setShown(false);
+          }
+        });
+  }
+  
+  //6. Catastro Fruticola
+  if(catFrutExist){
+    c.frut.boton.setLabel('Agregar capa catastro frutícola');
+    c.frut.panel.style().set('shown', false);
+    actualLayers.forEach(function(existingLayer) {
+          if (existingLayer.getName() === 'Catastro Frutícola') {
+            existingLayer.setShown(false);
+          }
+        });
+      
+  }
 
 }
 
-
-c.sensores.selector.onChange(function(nombreSeleccionado) {
-  Sensores.zoomSensor(nombreSeleccionado, c.map);
-  Sensores.updateTooltip(nombreSeleccionado, sensores_puntos, c.sensores.panel);
-  
-  // Llamar a serieSensor con un callback que maneje el resultado
-  Sensores.serieSensor(nombreSeleccionado, function(listGeometry) {
-    if (listGeometry) {
-      chartClass.createChartSensor(c, nombreSeleccionado, listGeometry, region);
-    } else {
-      print('listGeometry es undefined o null');
-    }
-  });
-});
-*/
 
 function getSelectedYear() {
   var agno_sel1 = c.selectSHAC.selector.getValue();
@@ -611,30 +616,6 @@ function getSelectedYear() {
 }
 
 c.selectSHAC.selector.onChange(getSelectedYear);
-
-
-
-//crear fila para panel de informacion 
-function createRow(label, value, bgColor) {
-  return ui.Panel({
-    widgets: [
-      ui.Label(label, {padding: '1px', backgroundColor: bgColor || 'white'}),
-      ui.Label(value, {padding: '1px', backgroundColor: bgColor || 'white'})
-    ],
-    layout: ui.Panel.Layout.flow('horizontal'),
-    style: {
-      backgroundColor: bgColor || 'white',
-      border: '1px solid black',
-      stretch: 'horizontal',
-      fontSize: '4px',
-      height: '35px'
-    }
-  });
-}
-
-
-
-
 
 /*******************************************************************************
  * Initialize *
@@ -665,9 +646,12 @@ c.map.onClick(function(coords) {
     var actualLayers = c.map.layers();
     var clickedPoint = ee.Geometry.Point(coords.lon, coords.lat);
     
-    // 1. Seleccionar SHAC
+    var catFrutExist = layerExists(actualLayers, 'Catastro Frutícola');
+    var usoSueloExist = layerExists(actualLayers, 'Uso de Suelo');
+    // 1. Seleccionar SHAC si no hay uso de suelo ni catastro fruticola
+    if(!catFrutExist && !usoSueloExist){
     ShacClass.onClickSHAC(coords.lon, coords.lat, c,region, shac_layer);
-  
+      }
     // 2. Remover punto anterior y Colocar punto 
     
     if (pointLayer) {
@@ -677,54 +661,25 @@ c.map.onClick(function(coords) {
     actualLayers.add(pointLayer);
     
     // 3. Agregar tabla de cat. fruticola
-    var catFrutExist = layerExists(actualLayers, 'Catastro Frutícola');
     if (catFrutExist) { //si existe e intersecta con el valor
-      catClass.actualizarCatFrut(clickedPoint, cat_frut,c);
-      // Actualizar las etiquetas con los valores retornados
-      //latRow.widgets().get(1).setValue(values.lat);
-      //lonRow.widgets().get(1).setValue(values.lon);
-      //humRow.widgets().get(1).setValue(values.hs);
-      //dateRow.widgets().get(1).setValue(values.newDate);
-      
-      // Mostrar el panel
-      //c.frut.panel.style().set('shown', true);
-      //c.frut.panel.style().set('position', 'bottom-left');
+      catClass.actualizarCatFrut(clickedPoint, Rcat_frut,c);
     } else {
       // Si no hay datos para las coordenadas clickeadas, esconder el panel
       c.frut.panel.style().set('shown', false);
-
-  
-}});
-  
-  /*
-c.map.onClick(function(coords) {
-  
-  var valueDict = chartClass.Click(c.selectSHAC.selector.getValue(), coords, region);
-  chartClass.createChartOUT(c,valueDict);
-  
-  //if(c.selectBand.selector.getValue()!== null){
-  chartClass.tablaInfo(coords, {map: c.map}, region, valueDict, c.selectBand.selector.getValue(), function(values) {
-    if (values) {
-      // Actualizar las etiquetas con los valores retornados
-      latRow.widgets().get(1).setValue(values.lat);
-      lonRow.widgets().get(1).setValue(values.lon);
-      humRow.widgets().get(1).setValue(values.hs);
-      dateRow.widgets().get(1).setValue(values.newDate);
+      }
       
-      // Mostrar el panel
-      c.infoTable.style().set('shown', true);
-      c.infoTable.style().set('position', 'bottom-left');
+    // 4. Agregar tabla de uso de suelo
+    
+    if (usoSueloExist) { //si existe e intersecta con el valor
+      usoClass. actualizarUsoSuelo(clickedPoint, uso_suelo,c);
+      
     } else {
       // Si no hay datos para las coordenadas clickeadas, esconder el panel
-      c.infoTable.style().set('shown', false);
-    }
-  });
+      c.usoSuelo.panel.style().set('shown', false);
+      }
   
-  }  
-  }
+});
   
-);
-*/
 
 print(c);
 var endTime = new Date().getTime();
