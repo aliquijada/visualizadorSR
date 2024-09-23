@@ -8,7 +8,6 @@
  * Guidelines: Los widgets se definen en el main y se actualizan aqui.
  ******************************************************************************/
 //var sensores_puntos = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/sensores_corfo");
-var dataSensores = ee.FeatureCollection("projects/ee-corfobbppciren2023/assets/DataSensores");
 var s = require('users/aliciaquijadac/VisualizadorSR:Style.js').styles; 
 
 
@@ -175,7 +174,6 @@ function zoomSHAC(nombreSeleccionado, shac_layer, map) {
     
     //map.layers().set(2, highLayer);
     map.layers().insert(2, highLayer);
-    
     map.centerObject(bbox);
   } else {
     print('No se encontró la geometría para el SHAC:', nombreSeleccionado);
