@@ -1,132 +1,115 @@
-// Define una lista de imagenes que sera agregara a una coleccion en el main.
-//var Selectores = require('users/corfobbppciren2023/App_HS_User:Selectores.js'); 
-
-
-//Funciones internasco
-
-function dateFormat(date){
-  //recibe la fecha como string y devuelve cada parte y el formato para ser utilizado en la banda
-    var parts = date.split('/');
-    var day = parts[0];
-    var month = parts[1];
-    var year = parts[2];
-    var newDate = 'b' + year + '-' + month + '-' + day;
-    return [newDate, year, month, day];
-}
-
-function checkAssetsYear(year) {
-  print('ejecutando');
-  var assetList = [
-    'users/corfobbppciren2023/SM' + year + 'Valparaiso_n1',
-    'users/corfobbppciren2023/SM' + year + 'Valparaiso_n2',
-    'users/corfobbppciren2023/SM' + year + 'Valparaiso_n3',
-    'users/corfobbppciren2023/SM' + year + 'Valparaiso_n4'
-  ];
+exports.actualizarCatFrut = function(point, cat_frut, c) {
+  var startTime = new Date().getTime();
   
-  var existingCount = 0;
-  
-  // Función auxiliar para verificar un asset
-  var checkAsset = function(assetPath) {
-    // Intenta obtener el asset para verificar su existencia
-    var asset = ee.Image(assetPath).getInfo();
-    if (asset) {
-      existingCount++;
+  // 1. Clear all dynamic panels
+  c.frut.dynamicPanel.clear();
+  c.frut.pan1.clear();
+  c.frut.pan2.clear();
+  c.frut.pan3.clear();
+  c.frut.pan4.clear();
+  print('coords', point);
+  // Filter features by the point
+  var features = cat_frut.filterBounds(point);
+  var count = features.size();
+
+  // Use 'evaluate' to work with the number of features asynchronously
+  count.evaluate(function(countVal) {
+    if (countVal === 0) {
+      print('No se encontró información en las coordenadas seleccionadas.');
+      c.frut.panel.style().set('shown', false);
+      return;
     }
-  };
-  
-  // Verificar cada asset en la lista
-  assetList.forEach(function(path) {
-    try {
-      checkAsset(path);
-    } catch (e) {
-
-    }
-  });
-  
-  return existingCount;
-}
-
-// Función para obtener el año actual
-function getYear() {
-  var currentDate = ee.Date(new Date());
-  // Extrae el año de la fecha actual
-  var currentYear = currentDate.get('year').getInfo();
-  return currentYear;
-}
-
-function checkImageExistence(path) {
-  return ee.data.getAsset(path) !== null;
-}
-
-exports.collection = function(selectedSHAC, selectedBand) {
-  //[temp] + "_SHAC_"+ nombre_SHAC
-  
-  var shpSHAC = selectedSHAC.replace(/\s*-\s*/g, ' ').split(' ').join('_');
-  //1.1. Revisar que selectedSHAC sea distinto de null
-  if(selectedSHAC === undefined){
-    return null;
-  }
-  
-  //1.2. Formar el nombre completo
-  var link_name = selectedBand + "_SHAC_" + shpSHAC;
-  
-  var imageIds ="users/corfobbppciren2023/SHAC_SR/" +link_name;
-  if(checkImageExistence(imageIds)){
-    return ee.FeatureCollection(imageIds);
-  }else{
-    print("no existe el archivo "+ imageIds);
-  }
-};
-
-//funcion para obtener min y max de la banda
-
-exports.MinMaxBand = function(layer, date) {
-  var region = layer.geometry();
-  var bandName = dateFormat(date)[0];
-  var stats = layer.reduceRegion({
-    reducer: ee.Reducer.minMax(),
-    geometry: region,
-    scale: 1000
-  });
-  
-  // Cree un diccionario con los valores mínimos y máximos
-  var minValue = stats.get(bandName + '_min');
-  var maxValue = stats.get(bandName + '_max');
-  return ee.Dictionary({min: minValue, max: maxValue});
-};
-
-
-  
-// Función para descargar imágenes del año especificado
-exports.DownloadYear = function(year) {
-  var links = [];
-  // Lista de IDs de imágenes
-  var imageIds = [
-    'users/corfobbppciren2023/SM' + year + 'Valparaiso_n1',
-    'users/corfobbppciren2023/SM' + year + 'Valparaiso_n2',
-    'users/corfobbppciren2023/SM' + year + 'Valparaiso_n3',
-    'users/corfobbppciren2023/SM' + year + 'Valparaiso_n4'
-  ];
-  
-  // Nombres de archivos para las imágenes
-  var fileNames = [
-    'SM' + year + 'Valparaiso_1',
-    'SM' + year + 'Valparaiso_2',
-    'SM' + year + 'Valparaiso_3',
-    'SM' + year + 'Valparaiso_4'
-  ];
-
-  // Verificar existencia y generar enlaces solo para imágenes existentes
-  for (var i = 0; i < imageIds.length; i++) {
-    if (checkImageExistence(imageIds[i])) {
-      var url = ee.Image(imageIds[i]).getDownloadURL({
-        name: fileNames[i],
-        scale: 1000,
-        filePerBand: false,
-        format: 'GEO_TIFF'
+    
+    // Get the first feature
+    var featureList = features.toList(countVal);
+    var feature = ee.Feature(featureList.get(0));
+    
+    // Retrieve the required properties without getInfo
+    var comuna = feature.get('desccomu').getInfo();
+    var especie1 = feature.get('especie_01');
+    var arbol1 = feature.get('arboles_01');
+    var superficie1 = feature.get('superfi_01');
+    
+    c.frut.com.setValue('Comuna: ' + comuna);
+    c.frut.dynamicPanel.insert(1,c.frut.com);
+    
+    
+    especie1.evaluate(function(especieVal) {
+      arbol1.evaluate(function(arbolVal) {
+        superficie1.evaluate(function(superficieVal) {
+          if (especieVal) c.frut.esp1.setValue('Especie 1: ' + especieVal);
+          if (arbolVal) c.frut.arb1.setValue('N. árboles: ' + arbolVal);
+          if (superficieVal) c.frut.sup1.setValue('Superficie: ' + superficieVal + ' ha');
+          
+          c.frut.pan1.insert(0, c.frut.esp1);
+          c.frut.pan1.insert(1, c.frut.arb1);
+          c.frut.pan1.insert(2, c.frut.sup1);
+          c.frut.dynamicPanel.insert(2, c.frut.pan1);
+        });
       });
-      links.push(url);
-    } 
-  }
-  return links;
+    });
+
+    // Process the second set of features
+    feature.get('arboles_02').evaluate(function(arbol2Val) {
+      if (arbol2Val !== 0) {
+        feature.get('especie_02').evaluate(function(especie2Val) {
+          feature.get('superfi_02').evaluate(function(superficie2Val) {
+            if (especie2Val) c.frut.esp2.setValue('Especie 2: ' + especie2Val);
+            if (arbol2Val) c.frut.arb2.setValue('N. árboles: ' + arbol2Val);
+            if (superficie2Val) c.frut.sup2.setValue('Superficie: ' + superficie2Val + ' ha');
+            
+            c.frut.pan2.insert(0, c.frut.esp2);
+            c.frut.pan2.insert(1, c.frut.arb2);
+            c.frut.pan2.insert(2, c.frut.sup2);
+            c.frut.dynamicPanel.insert(3, c.frut.pan2);
+          });
+        });
+      }
+    });
+
+    // Process the third set of features (arbol3)
+    feature.get('arboles_03').evaluate(function(arbol3Val) {
+      if (arbol3Val !== 0) {
+        feature.get('especie_03').evaluate(function(especie3Val) {
+          feature.get('superfi_03').evaluate(function(superficie3Val) {
+            if (especie3Val) c.frut.esp3.setValue('Especie 3: ' + especie3Val);
+            if (arbol3Val) c.frut.arb3.setValue('N. árboles: ' + arbol3Val);
+            if (superficie3Val) c.frut.sup3.setValue('Superficie: ' + superficie3Val + ' ha');
+            
+            c.frut.pan3.insert(0, c.frut.esp3);
+            c.frut.pan3.insert(1, c.frut.arb3);
+            c.frut.pan3.insert(2, c.frut.sup3);
+            c.frut.dynamicPanel.insert(4, c.frut.pan3);
+          });
+        });
+      }
+    });
+
+    // Process the fourth set of features (arbol4)
+    feature.get('arboles_04').evaluate(function(arbol4Val) {
+      if (arbol4Val !== 0) {
+        feature.get('especie_04').evaluate(function(especie4Val) {
+          feature.get('superfi_04').evaluate(function(superficie4Val) {
+            if (especie4Val) c.frut.esp4.setValue('Especie 4: ' + especie4Val);
+            if (arbol4Val) c.frut.arb4.setValue('N. árboles: ' + arbol4Val);
+            if (superficie4Val) c.frut.sup4.setValue('Superficie: ' + superficie4Val + ' ha');
+            
+            c.frut.pan4.insert(0, c.frut.esp4);
+            c.frut.pan4.insert(1, c.frut.arb4);
+            c.frut.pan4.insert(2, c.frut.sup4);
+            c.frut.dynamicPanel.insert(5, c.frut.pan4);
+          });
+        });
+      }
+    });
+
+    // Finally, show the panel
+    c.frut.panel.style().set('shown', true);
+    c.frut.panel.style().set('position', 'bottom-left');
+
+    // End time and execution print
+    var endTime = new Date().getTime();
+    var executionTime = endTime - startTime;
+    print('Tiempo de ejecución funcion Cat. Frut (ms):', executionTime);
+  });
 };
