@@ -7,7 +7,7 @@ exports.actualizarCatFrut = function(point, cat_frut, c) {
   c.frut.pan2.clear();
   c.frut.pan3.clear();
   c.frut.pan4.clear();
-
+  print('coords', point);
   // Filter features by the point
   var features = cat_frut.filterBounds(point);
   var count = features.size();
